@@ -6,8 +6,9 @@
  *   node scripts/seed-content.mjs --draft    # create, leave everything draft
  *   node scripts/seed-content.mjs --dry-run  # print what it would do
  *
- * Needs a MANAGEMENT token (cms_mgm_…) or a user JWT — delivery and preview
- * keys are read-only, so they cannot create anything:
+ * Configuration is read from .env.local, then .env, then the environment
+ * itself (which wins). Needs a MANAGEMENT token (cms_mgm_…) or a user JWT —
+ * delivery and preview keys are read-only, so they cannot create anything:
  *
  *   CMS_URL=https://your-cms.example.com
  *   CMS_SPACE_ID=…
@@ -19,11 +20,51 @@
  * partially-seeded space instead of failing halfway.
  */
 import { readFile } from "node:fs/promises";
+import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const CONTENT = join(HERE, "..", "content", "demo-content.json");
+const ROOT = join(HERE, "..");
+const CONTENT = join(ROOT, "content", "demo-content.json");
+
+/**
+ * Load .env.local / .env into process.env.
+ *
+ * Next.js loads these for `next dev` and `next build`, but a plain
+ * `node scripts/…` does not — so without this the script would sit next to a
+ * filled-in .env.local insisting nothing is configured.
+ *
+ * Precedence matches Next's: a variable already in the environment wins, then
+ * .env.local, then .env. Deliberately hand-rolled rather than using
+ * process.loadEnvFile so the precedence is explicit and it runs on any Node 20+.
+ */
+function loadEnvFiles() {
+  for (const file of [".env.local", ".env"]) {
+    const path = join(ROOT, file);
+    if (!existsSync(path)) continue;
+    for (const line of readFileSync(path, "utf8").split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eq = trimmed.indexOf("=");
+      if (eq === -1) continue;
+      const key = trimmed.slice(0, eq).trim();
+      // An exported-but-empty var shouldn't mask a real value in the file.
+      if (!key || (key in process.env && process.env[key] !== "")) continue;
+      let value = trimmed.slice(eq + 1).trim();
+      // Strip one layer of matching quotes, the way dotenv does.
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      if (value) process.env[key] = value;
+    }
+  }
+}
+
+loadEnvFiles();
 
 const DRY_RUN = process.argv.includes("--dry-run");
 const PUBLISH = !process.argv.includes("--draft");
@@ -39,8 +80,17 @@ function die(message) {
 }
 
 if (!url || !spaceId || !token) {
+  const missing = [
+    !url && "CMS_URL",
+    !spaceId && "CMS_SPACE_ID",
+    !token && "CMS_MANAGEMENT_TOKEN",
+  ].filter(Boolean);
+  const looked = [".env.local", ".env"].filter((f) => existsSync(join(ROOT, f)));
   die(
-    "Set CMS_URL, CMS_SPACE_ID and CMS_MANAGEMENT_TOKEN.\n" +
+    `Missing ${missing.join(", ")}.\n` +
+      (looked.length
+        ? `  Read ${looked.join(" and ")} — add the missing key(s) there.\n`
+        : `  No .env.local or .env found in ${ROOT}.\n`) +
       "  The management token comes from Settings → API keys (type: Management).\n" +
       "  A delivery or preview key will not work — they cannot write."
   );

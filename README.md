@@ -48,15 +48,22 @@ This site renders four content types and expects a landing page with slug
 `home`. Rather than clicking all that into the editor, create it in one go:
 
 ```bash
-CMS_URL=http://localhost:8000 \
-CMS_SPACE_ID=<your space id> \
-CMS_ENVIRONMENT=master \
-CMS_MANAGEMENT_TOKEN=cms_mgm_… \
 node scripts/seed-content.mjs
 ```
 
-The token must be a **Management** key (or a user JWT) — delivery and preview
-keys are read-only and cannot create anything.
+It reads the same `.env.local` the site uses, plus one more variable:
+
+```bash
+CMS_MANAGEMENT_TOKEN=cms_mgm_…
+```
+
+That must be a **Management** key (or a user JWT) — delivery and preview keys
+are read-only and cannot create anything. Anything exported in your shell
+overrides the file, so a one-off run against another environment is just:
+
+```bash
+CMS_ENVIRONMENT=staging node scripts/seed-content.mjs
+```
 
 | Flag | Effect |
 |---|---|
