@@ -142,8 +142,58 @@ function resolveRefs(value, ids) {
   return value;
 }
 
+/**
+ * Find an entry this plan already created, so re-runs top up rather than
+ * duplicate. Pages match on slug; blocks have none, so they match on the
+ * content type's display field — unique across this content set.
+ */
+async function findExisting(entry, fields, typeIdByApiId) {
+  const found = await api(
+    rel(`${envRoot}/entries?content_type=${entry.contentType}&limit=200`)
+  );
+  if (!found.ok) return null;
+
+  if (typeof fields.slug === "string" && fields.slug) {
+    return found.body.items.find((e) => e.slug === fields.slug) ?? null;
+  }
+
+  const types = typeIdByApiId.get(entry.contentType);
+  const displayField = entry.displayField ?? DISPLAY_FIELDS[entry.contentType];
+  if (!displayField) return null;
+  const wanted = strings(fields[displayField]);
+  if (!wanted.size) return null;
+  return (
+    found.body.items.find((e) =>
+      [...strings(e.fields?.[displayField])].some((v) => wanted.has(v))
+    ) ?? null
+  );
+}
+
+/**
+ * Every string in a value, whether it is plain or a {locale: value} map.
+ *
+ * Comparing "the first value" would be a bug: the API returns locale maps in
+ * whatever order Postgres stored them, so the same entry can come back
+ * {fr, en-US} while the seed file says {en-US, fr}. Matching on any overlap is
+ * order-independent.
+ */
+function strings(value) {
+  if (typeof value === "string") return new Set(value.trim() ? [value] : []);
+  if (value && typeof value === "object") {
+    return new Set(
+      Object.values(value).filter((v) => typeof v === "string" && v.trim())
+    );
+  }
+  return new Set();
+}
+
+let DISPLAY_FIELDS = {};
+
 async function main() {
   const plan = JSON.parse(await readFile(CONTENT, "utf8"));
+  DISPLAY_FIELDS = Object.fromEntries(
+    plan.contentTypes.map((t) => [t.api_id, t.display_field])
+  );
 
   console.log(`\nOndros demo content`);
   console.log(`  space        ${spaceId}`);
@@ -159,6 +209,24 @@ async function main() {
     }
     console.log();
     return;
+  }
+
+  // --- locales ---------------------------------------------------------------
+  // Publishing rejects a localized value for a locale the space doesn't have,
+  // so the copy's locales have to exist before any of it can go live.
+  for (const locale of plan.locales ?? []) {
+    const res = await api(`/spaces/${spaceId}/locales`, { method: "POST", body: locale });
+    if (res.status === 409) {
+      console.log(`  = locale        ${locale.code}  (already configured)`);
+      continue;
+    }
+    if (!res.ok) {
+      die(
+        `Adding locale ${locale.code} failed (${res.status}): ${JSON.stringify(res.body)}\n` +
+          `  Add it by hand under Settings → Locales, then re-run.`
+      );
+    }
+    console.log(`  + locale        ${locale.code}`);
   }
 
   // --- content types --------------------------------------------------------
@@ -198,21 +266,27 @@ async function main() {
     if (!contentTypeId) die(`No content type "${entry.contentType}" in this environment`);
 
     const fields = resolveRefs(entry.fields, ids);
+
+    // A block models no slug, so creating one again would never collide — it
+    // would just silently add a second hero. Look first.
+    const duplicate = await findExisting(entry, fields, typeIdByApiId);
+    if (duplicate) {
+      ids.set(entry.ref, duplicate.id);
+      console.log(`  = entry         ${entry.contentType.padEnd(13)} ${entry.ref}  (exists, reused)`);
+      continue;
+    }
+
     const res = await api(rel(`${envRoot}/entries`), {
       method: "POST",
       body: { content_type_id: contentTypeId, fields },
     });
 
     if (res.status === 409) {
-      // Slug already taken: find the existing entry so references still wire up.
-      const slug = fields.slug;
-      const found = await api(
-        rel(`${envRoot}/entries?content_type=${entry.contentType}&limit=200`)
-      );
-      const match = found.ok ? found.body.items.find((e) => e.slug === slug) : null;
+      // Slug already taken: reuse the existing entry so references still wire up.
+      const match = await findExisting(entry, fields, typeIdByApiId);
       if (!match) die(`Entry ${entry.ref} exists but could not be found to reuse`);
       ids.set(entry.ref, match.id);
-      console.log(`  = entry         ${entry.contentType.padEnd(13)} ${entry.ref}  (slug taken, reused)`);
+      console.log(`  = entry         ${entry.contentType.padEnd(13)} ${entry.ref}  (exists, reused)`);
       continue;
     }
     if (!res.ok) die(`Creating entry ${entry.ref} failed (${res.status}): ${JSON.stringify(res.body)}`);
@@ -245,7 +319,7 @@ async function main() {
       (PUBLISH ? `, ${published} published` : ", left as drafts") +
       `\n`
   );
-  console.log(`  Next: point .env.local at this space and run \`npm run dev\`.`);
+  console.log(`  Next: point .env at this space and run \`npm run dev\`.`);
   console.log(`  The landing page renders at /, the articles at /articles.\n`);
 }
 

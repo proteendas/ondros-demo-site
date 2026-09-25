@@ -1,6 +1,12 @@
 {
   "$comment": "Content model + copy for the Ondros demo site. Applied by scripts/seed-content.mjs. Entries reference each other by the `ref` key, resolved to real entry ids at creation time.",
 
+  "$comment2": "Locales the copy is written in. Seeding adds any the space is missing, because localized values for a locale a space doesn't have are rejected on publish.",
+  "locales": [
+    { "code": "en-US", "name": "English (US)" },
+    { "code": "fr", "name": "French", "fallback_code": "en-US" }
+  ],
+
   "contentTypes": [
     {
       "name": "Hero Section",
