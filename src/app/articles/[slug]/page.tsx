@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { getEntryBySlug } from "@/lib/cms";
+import { getEntryBySlug, makeResolver } from "@/lib/cms";
+import RichText from "@/components/rich-text";
 import { readPreview, resource, prop, type SearchParams } from "@/lib/preview";
 
 export const revalidate = 30;
@@ -14,7 +15,9 @@ export default async function ArticlePage({
   const { slug } = await params;
   const { preview, locale } = readPreview(await searchParams);
 
-  const { entry: article } = await getEntryBySlug("article", slug, locale, 0, { preview });
+  const { entry: article, includes } = await getEntryBySlug("article", slug, locale, 1, {
+    preview,
+  });
 
   if (!article) notFound();
 
@@ -45,10 +48,11 @@ export default async function ArticlePage({
             })}
           </p>
         ) : null}
-        <div
+        <RichText
           {...prop("body", "richtext", "Body")}
+          value={article.fields.body}
+          resolve={makeResolver(includes)}
           className="prose prose-neutral mt-8 max-w-none border border-neutral-200 p-8 dark:prose-invert dark:border-white/10"
-          dangerouslySetInnerHTML={{ __html: article.fields.body as string }}
         />
       </article>
     </div>
