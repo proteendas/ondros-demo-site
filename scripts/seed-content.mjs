@@ -6,9 +6,10 @@
  *   node scripts/seed-content.mjs --draft    # create, leave everything draft
  *   node scripts/seed-content.mjs --dry-run  # print what it would do
  *
- * Configuration is read from .env.local, then .env, then the environment
- * itself (which wins). Needs a MANAGEMENT token (cms_mgm_…) or a user JWT —
- * delivery and preview keys are read-only, so they cannot create anything:
+ * Configuration is read from .env (the same file the site uses), overridden by
+ * anything exported in the shell. Needs a MANAGEMENT token (cms_mgm_…) or a
+ * user JWT — delivery and preview keys are read-only and cannot create
+ * anything:
  *
  *   CMS_URL=https://your-cms.example.com
  *   CMS_SPACE_ID=…
@@ -29,18 +30,22 @@ const ROOT = join(HERE, "..");
 const CONTENT = join(ROOT, "content", "demo-content.json");
 
 /**
- * Load .env.local / .env into process.env.
+ * Load .env into process.env.
  *
- * Next.js loads these for `next dev` and `next build`, but a plain
+ * Next.js loads env files for `next dev` and `next build`, but a plain
  * `node scripts/…` does not — so without this the script would sit next to a
- * filled-in .env.local insisting nothing is configured.
+ * filled-in .env insisting nothing is configured.
  *
- * Precedence matches Next's: a variable already in the environment wins, then
- * .env.local, then .env. Deliberately hand-rolled rather than using
+ * `.env` is this project's config file: Next reads it too, so the site and
+ * this script always agree. `.env.local` is still read as a fallback for
+ * checkouts that already have one, but keeping both is asking for trouble —
+ * Next gives `.env.local` the higher precedence, so the two would disagree.
+ *
+ * Anything already exported wins over both. Hand-rolled rather than
  * process.loadEnvFile so the precedence is explicit and it runs on any Node 20+.
  */
 function loadEnvFiles() {
-  for (const file of [".env.local", ".env"]) {
+  for (const file of [".env", ".env.local"]) {
     const path = join(ROOT, file);
     if (!existsSync(path)) continue;
     for (const line of readFileSync(path, "utf8").split("\n")) {
@@ -85,12 +90,12 @@ if (!url || !spaceId || !token) {
     !spaceId && "CMS_SPACE_ID",
     !token && "CMS_MANAGEMENT_TOKEN",
   ].filter(Boolean);
-  const looked = [".env.local", ".env"].filter((f) => existsSync(join(ROOT, f)));
+  const looked = [".env", ".env.local"].filter((f) => existsSync(join(ROOT, f)));
   die(
     `Missing ${missing.join(", ")}.\n` +
       (looked.length
         ? `  Read ${looked.join(" and ")} — add the missing key(s) there.\n`
-        : `  No .env.local or .env found in ${ROOT}.\n`) +
+        : `  No .env found in ${ROOT}. Copy .env.example to .env.\n`) +
       "  The management token comes from Settings → API keys (type: Management).\n" +
       "  A delivery or preview key will not work — they cannot write."
   );

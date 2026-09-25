@@ -19,10 +19,14 @@ Content comes from the delivery API; nothing is hard-coded.
 
 ```bash
 npm install
-cp .env.example .env.local        # fill in the space id and tokens
+cp .env.example .env              # fill in the space id and tokens
 node scripts/seed-content.mjs     # create the content model + copy in your space
 npm run dev
 ```
+
+> Use `.env`, not `.env.local`. Next.js reads both but gives `.env.local` the
+> higher precedence, so keeping two copies is a reliable way to end up
+> debugging a value you already changed.
 
 The space id and API tokens come from the CMS: **Settings → API keys** (or the
 `python -m app.seed` output for a local CMS).
@@ -51,7 +55,7 @@ This site renders four content types and expects a landing page with slug
 node scripts/seed-content.mjs
 ```
 
-It reads the same `.env.local` the site uses, plus one more variable:
+It reads the same `.env` the site uses, plus one more variable:
 
 ```bash
 CMS_MANAGEMENT_TOKEN=cms_mgm_…
