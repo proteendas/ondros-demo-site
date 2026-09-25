@@ -1,18 +1,18 @@
 import Link from "next/link";
-import { getEntries, isLocaleCode, DEFAULT_LOCALE } from "@/lib/cms";
+import { getEntries, DEFAULT_LOCALE } from "@/lib/cms";
+import { readPreview, resource, prop, type SearchParams } from "@/lib/preview";
 
 export const revalidate = 30;
 
 export default async function ArticlesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ locale?: string }>;
+  searchParams: Promise<SearchParams>;
 }) {
-  const { locale: rawLocale } = await searchParams;
-  const locale = isLocaleCode(rawLocale) ? rawLocale : DEFAULT_LOCALE;
+  const { preview, locale } = readPreview(await searchParams);
   const suffix = locale === DEFAULT_LOCALE ? "" : `?locale=${locale}`;
 
-  const { items } = await getEntries("article", locale);
+  const { items } = await getEntries("article", locale, 0, { preview });
 
   return (
     <div className="bg-white dark:bg-black">
@@ -22,16 +22,24 @@ export default async function ArticlesPage({
         </h1>
         <ul className="mt-10 divide-y divide-neutral-200 dark:divide-white/10">
           {items.map((article) => (
-            <li key={article.id}>
+            // Each row is a real entry, so it is instrumented too: an editor
+            // can retitle an article straight from the listing.
+            <li key={article.id} {...resource(article.id, article.contentType.apiId)}>
               <Link
                 href={`/articles/${article.slug}${suffix}`}
                 className="group block border-l-2 border-transparent py-6 pl-4 transition hover:border-[#ed1515] hover:bg-neutral-50 dark:hover:bg-white/5"
               >
-                <h2 className="text-xl font-semibold text-black group-hover:text-[#ed1515] dark:text-white">
+                <h2
+                  {...prop("title", "text", "Title")}
+                  className="text-xl font-semibold text-black group-hover:text-[#ed1515] dark:text-white"
+                >
                   {article.fields.title as string}
                 </h2>
                 {article.fields.excerpt ? (
-                  <p className="mt-2 text-neutral-600 dark:text-neutral-400">
+                  <p
+                    {...prop("excerpt", "text", "Excerpt")}
+                    className="mt-2 text-neutral-600 dark:text-neutral-400"
+                  >
                     {article.fields.excerpt as string}
                   </p>
                 ) : null}

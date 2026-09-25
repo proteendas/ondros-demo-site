@@ -1,0 +1,58 @@
+{
+  "previewUrl": "http://localhost:3000",
+  "routes": {
+    "landing_page": "/?ondros-slug={slug}",
+    "article": "/articles/{slug}"
+  },
+  "components": [
+    {
+      "id": "landing_page",
+      "title": "Landing Page",
+      "contentType": "landing_page",
+      "block": "landing-page",
+      "fields": [
+        { "name": "title", "label": "Page title", "component": "text" },
+        { "name": "slug", "label": "Slug", "component": "text" },
+        { "name": "hero", "label": "Hero", "component": "reference" },
+        { "name": "sections", "label": "Feature cards", "component": "reference-multiple" },
+        { "name": "seo_description", "label": "SEO description", "component": "text" }
+      ]
+    },
+    {
+      "id": "article",
+      "title": "Article",
+      "contentType": "article",
+      "block": "article",
+      "fields": [
+        { "name": "title", "label": "Title", "component": "text" },
+        { "name": "slug", "label": "Slug", "component": "text" },
+        { "name": "excerpt", "label": "Excerpt", "component": "text" },
+        { "name": "body", "label": "Body", "component": "richtext" },
+        { "name": "published_date", "label": "Publish date", "component": "date-time" }
+      ]
+    },
+    {
+      "id": "hero",
+      "title": "Hero Section",
+      "contentType": "hero",
+      "block": "hero",
+      "fields": [
+        { "name": "heading", "label": "Heading", "component": "text" },
+        { "name": "subheading", "label": "Subheading", "component": "text" },
+        { "name": "cta_label", "label": "CTA label", "component": "text" },
+        { "name": "image", "label": "Background image", "component": "reference" }
+      ]
+    },
+    {
+      "id": "card",
+      "title": "Feature Card",
+      "contentType": "card",
+      "block": "cards",
+      "fields": [
+        { "name": "title", "label": "Title", "component": "text" },
+        { "name": "body", "label": "Body", "component": "text" },
+        { "name": "icon", "label": "Icon", "component": "select" }
+      ]
+    }
+  ]
+}
