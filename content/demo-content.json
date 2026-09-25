@@ -1,0 +1,211 @@
+{
+  "$comment": "Content model + copy for the Ondros demo site. Applied by scripts/seed-content.mjs. Entries reference each other by the `ref` key, resolved to real entry ids at creation time.",
+
+  "contentTypes": [
+    {
+      "name": "Hero Section",
+      "api_id": "hero",
+      "description": "The banner at the top of a landing page. A reusable block: it models no slug, so it has no URL of its own and previews inside whichever page uses it.",
+      "display_field": "heading",
+      "fields": [
+        { "id": "heading", "name": "Heading", "type": "text", "localized": true,
+          "validations": { "required": true, "max_length": 80 },
+          "ai_hint": "One bold claim, under ten words." },
+        { "id": "subheading", "name": "Subheading", "type": "text", "localized": true,
+          "validations": { "max_length": 200 } },
+        { "id": "cta_label", "name": "CTA label", "type": "text",
+          "validations": { "required": true, "max_length": 30 },
+          "help_text": "Button text. Links to the articles index." },
+        { "id": "image", "name": "Background image", "type": "media" }
+      ]
+    },
+    {
+      "name": "Feature Card",
+      "api_id": "card",
+      "description": "One feature tile in the grid below the hero. Also a block — no slug.",
+      "display_field": "title",
+      "fields": [
+        { "id": "title", "name": "Title", "type": "text", "localized": true,
+          "validations": { "required": true, "max_length": 60 } },
+        { "id": "body", "name": "Body", "type": "longtext", "localized": true,
+          "validations": { "max_length": 400 } },
+        { "id": "icon", "name": "Icon", "type": "select",
+          "validations": { "allowed_values": ["zap", "shield", "globe", "layers", "sparkles"] },
+          "help_text": "Matches the icon set in src/lib/icons.tsx." }
+      ]
+    },
+    {
+      "name": "Landing Page",
+      "api_id": "landing_page",
+      "description": "A page assembled from a hero and a row of feature cards. Models a slug, so its entries are pages.",
+      "display_field": "title",
+      "fields": [
+        { "id": "title", "name": "Page title", "type": "text",
+          "validations": { "required": true, "max_length": 120 } },
+        { "id": "slug", "name": "Slug", "type": "slug",
+          "validations": { "required": true, "max_length": 120 },
+          "help_text": "The site renders the page with slug 'home' at /." },
+        { "id": "hero", "name": "Hero", "type": "reference",
+          "allowed_content_types": ["hero"] },
+        { "id": "sections", "name": "Feature cards", "type": "reference_many",
+          "allowed_content_types": ["card"],
+          "validations": { "max_items": 6 } },
+        { "id": "seo_description", "name": "SEO description", "type": "text",
+          "validations": { "max_length": 160 },
+          "ai_hint": "Meta description for search engines, max 160 characters." }
+      ]
+    },
+    {
+      "name": "Article",
+      "api_id": "article",
+      "description": "A blog post. Models a slug, so its entries are pages at /articles/<slug>.",
+      "display_field": "title",
+      "fields": [
+        { "id": "title", "name": "Title", "type": "text", "localized": true,
+          "validations": { "required": true, "max_length": 120 } },
+        { "id": "slug", "name": "Slug", "type": "slug",
+          "validations": { "required": true, "max_length": 120 } },
+        { "id": "excerpt", "name": "Excerpt", "type": "text", "localized": true,
+          "validations": { "max_length": 200 },
+          "help_text": "Shown on the articles index." },
+        { "id": "body", "name": "Body", "type": "richtext", "localized": true,
+          "validations": { "required": true } },
+        { "id": "published_date", "name": "Publish date", "type": "datetime" },
+        { "id": "seo_description", "name": "SEO description", "type": "text",
+          "validations": { "max_length": 160 } }
+      ]
+    }
+  ],
+
+  "entries": [
+    {
+      "ref": "hero-home",
+      "contentType": "hero",
+      "fields": {
+        "heading": {
+          "en-US": "Content that ships as fast as your team",
+          "fr": "Du contenu qui avance au rythme de votre équipe"
+        },
+        "subheading": {
+          "en-US": "Model it once, edit it on the real page, and deliver it anywhere through a single API.",
+          "fr": "Modélisez-le une fois, modifiez-le sur la vraie page, et diffusez-le partout via une seule API."
+        },
+        "cta_label": "Read the articles"
+      }
+    },
+    {
+      "ref": "card-preview",
+      "contentType": "card",
+      "fields": {
+        "icon": "zap",
+        "title": { "en-US": "Edit the real page", "fr": "Modifiez la vraie page" },
+        "body": {
+          "en-US": "Previews load your own deployed site, not an approximation of it. Click any heading to jump to its field, or edit the text where it sits.",
+          "fr": "L'aperçu charge votre site déployé, pas une approximation. Cliquez sur un titre pour atteindre son champ, ou modifiez le texte sur place."
+        }
+      }
+    },
+    {
+      "ref": "card-blocks",
+      "contentType": "card",
+      "fields": {
+        "icon": "layers",
+        "title": { "en-US": "Blocks you reuse", "fr": "Des blocs réutilisables" },
+        "body": {
+          "en-US": "A hero or a card is an entry in its own right, referenced by the pages that need it. Change it once and every page carrying it updates.",
+          "fr": "Un hero ou une carte est une entrée à part entière, référencée par les pages qui en ont besoin. Modifiez-la une fois et toutes les pages suivent."
+        }
+      }
+    },
+    {
+      "ref": "card-locales",
+      "contentType": "card",
+      "fields": {
+        "icon": "globe",
+        "title": { "en-US": "Every locale, one model", "fr": "Chaque langue, un seul modèle" },
+        "body": {
+          "en-US": "Mark a field localized and it stores a value per locale. The delivery API resolves the right one, falling back down a chain you configure.",
+          "fr": "Marquez un champ comme localisé et il stocke une valeur par langue. L'API de diffusion résout la bonne, avec une chaîne de repli configurable."
+        }
+      }
+    },
+    {
+      "ref": "page-home",
+      "contentType": "landing_page",
+      "fields": {
+        "title": "Acme Platform",
+        "slug": "home",
+        "hero": { "$ref": "hero-home" },
+        "sections": [
+          { "$ref": "card-preview" },
+          { "$ref": "card-blocks" },
+          { "$ref": "card-locales" }
+        ],
+        "seo_description": "Acme Platform — structured content modelled once, edited on the real page, and delivered anywhere through one API."
+      }
+    },
+    {
+      "ref": "article-preview",
+      "contentType": "article",
+      "fields": {
+        "slug": "previewing-the-real-page",
+        "published_date": "2026-09-02T09:00:00Z",
+        "seo_description": "Why a CMS should preview your own deployed site instead of rendering its own approximation of it.",
+        "title": {
+          "en-US": "Previewing the real page, not a drawing of it",
+          "fr": "Prévisualiser la vraie page, pas son dessin"
+        },
+        "excerpt": {
+          "en-US": "Most headless previews render their own approximation of your site. Here is what changes when the preview is the site.",
+          "fr": "La plupart des aperçus headless affichent une approximation de votre site. Voici ce qui change quand l'aperçu est le site."
+        },
+        "body": {
+          "en-US": "<p>A preview pane that renders content generically can only ever be an approximation. It has no idea what your CSS does, how your components compose, or where your spacing comes from — so authors learn to distrust it and check the deployed site anyway.</p><h2>The preview is the site</h2><p>Connect the repository that builds your site and the editor loads <em>those</em> pages in the preview pane. Your stylesheet, your components, your layout. What an author approves is what visitors get.</p><h2>Two shapes of preview</h2><p>A page has a URL of its own, so it opens at that URL. A reusable block does not — a hero exists to sit inside a page — so it opens in a page that references it, scrolled to and outlined.</p><ul><li>Pages preview at their real address.</li><li>Blocks preview in context, never in isolation.</li><li>Anything not yet used on a page says so plainly.</li></ul><h2>What it costs you</h2><p>One script tag and a handful of data attributes saying which entry and field each element renders. No framework lock-in: the script is plain JavaScript and the attributes are plain HTML.</p>",
+          "fr": "<p>Un aperçu qui rend le contenu de façon générique ne sera jamais qu'une approximation. Il ignore ce que fait votre CSS, comment vos composants s'assemblent, d'où viennent vos espacements — alors les auteurs s'en méfient et vont vérifier sur le site déployé.</p><h2>L'aperçu, c'est le site</h2><p>Connectez le dépôt qui construit votre site et l'éditeur charge <em>ces</em> pages dans le volet d'aperçu. Votre feuille de style, vos composants, votre mise en page. Ce qu'un auteur valide est ce que les visiteurs verront.</p><h2>Deux formes d'aperçu</h2><p>Une page possède sa propre URL, elle s'ouvre donc à cette adresse. Un bloc réutilisable non — un hero existe pour vivre dans une page — il s'ouvre donc dans une page qui le référence, mis en évidence.</p><ul><li>Les pages s'affichent à leur vraie adresse.</li><li>Les blocs s'affichent en contexte, jamais isolés.</li><li>Ce qui n'est utilisé nulle part le dit clairement.</li></ul><h2>Ce que cela coûte</h2><p>Une balise script et quelques attributs indiquant quelle entrée et quel champ chaque élément rend. Sans dépendance à un framework : le script est du JavaScript simple et les attributs du HTML simple.</p>"
+        }
+      }
+    },
+    {
+      "ref": "article-pages-blocks",
+      "contentType": "article",
+      "fields": {
+        "slug": "pages-and-blocks",
+        "published_date": "2026-09-10T09:00:00Z",
+        "seo_description": "A content type is addressable because it models a slug field. What that one decision changes across the editor, the API and the preview.",
+        "title": {
+          "en-US": "Pages and blocks: one field decides",
+          "fr": "Pages et blocs : un champ décide"
+        },
+        "excerpt": {
+          "en-US": "A type is a page because its model contains a slug field. Nothing else marks the difference — and that turns out to be enough.",
+          "fr": "Un type est une page parce que son modèle contient un champ slug. Rien d'autre ne distingue les deux — et cela suffit."
+        },
+        "body": {
+          "en-US": "<p>Some content has an address. A landing page lives at <code>/</code>, an article at <code>/articles/something</code>. Other content never does: a hero, a feature card, a testimonial. They exist to be placed inside something else.</p><h2>Model the difference, don't flag it</h2><p>A content type is addressable because its model contains a <strong>slug field</strong>. That is the whole rule. Add one and entries of that type become pages; leave it out and they are blocks.</p><p>The alternative — a checkbox on the type — puts the same information somewhere the API can't see and the model doesn't describe.</p><h2>What follows from it</h2><ul><li>Authors creating a card are never asked for a URL, because a card has none.</li><li>The delivery API reports a null slug for blocks, so clients know not to link to them.</li><li>The editor previews a page at its address and a block inside a page that uses it.</li></ul><p>One field in the model, and three parts of the system stop guessing.</p>",
+          "fr": "<p>Certains contenus ont une adresse. Une page d'accueil vit à <code>/</code>, un article à <code>/articles/quelque-chose</code>. D'autres n'en ont jamais : un hero, une carte, un témoignage. Ils existent pour être placés dans autre chose.</p><h2>Modéliser la différence, pas la cocher</h2><p>Un type de contenu est adressable parce que son modèle contient un <strong>champ slug</strong>. C'est toute la règle. Ajoutez-en un et ses entrées deviennent des pages ; omettez-le et ce sont des blocs.</p><p>L'alternative — une case à cocher sur le type — place la même information là où l'API ne la voit pas et où le modèle ne la décrit pas.</p><h2>Ce qui en découle</h2><ul><li>On ne demande jamais d'URL à l'auteur d'une carte, puisqu'elle n'en a pas.</li><li>L'API renvoie un slug nul pour les blocs : les clients savent qu'il ne faut pas les lier.</li><li>L'éditeur affiche une page à son adresse et un bloc dans une page qui l'utilise.</li></ul><p>Un champ dans le modèle, et trois parties du système cessent de deviner.</p>"
+        }
+      }
+    },
+    {
+      "ref": "article-locales",
+      "contentType": "article",
+      "fields": {
+        "slug": "five-locales-one-codebase",
+        "published_date": "2026-09-18T09:00:00Z",
+        "seo_description": "Per-field localization with fallback chains, so shipping a fifth language doesn't mean a fifth codebase.",
+        "title": {
+          "en-US": "Five locales, one codebase",
+          "fr": "Cinq langues, une seule base de code"
+        },
+        "excerpt": {
+          "en-US": "Localization belongs to the field, not the deployment. Mark what varies, leave the rest alone.",
+          "fr": "La localisation appartient au champ, pas au déploiement. Marquez ce qui varie, laissez le reste tranquille."
+        },
+        "body": {
+          "en-US": "<p>The expensive way to ship a second language is to copy the site. The cheap way is to notice that most of a page doesn't change at all.</p><h2>Localize the field, not the site</h2><p>Mark a field localized and it stores one value per locale. Everything else — slugs, enum keys, reference wiring — stays single-valued, because translating them would only create work.</p><h2>Fallbacks do the rest</h2><p>Ask for a locale and the delivery API walks a chain you configure until it finds a value. A missing French subheading falls back to English rather than rendering an empty block, so a half-finished translation is still a shippable page.</p><ul><li>Required is satisfied by the default locale, so a translation can lag without blocking publication.</li><li>Validation runs per locale: a length limit applies to each translation separately.</li><li>Asking for every locale at once returns the raw maps, which is what translation tooling wants.</li></ul><p>This page is the demonstration: switch the language in the header and watch the hero and cards change while the layout does not.</p>",
+          "fr": "<p>La façon coûteuse de lancer une deuxième langue est de dupliquer le site. La façon économique est de remarquer que l'essentiel d'une page ne change pas.</p><h2>Localiser le champ, pas le site</h2><p>Marquez un champ comme localisé et il stocke une valeur par langue. Le reste — slugs, clés d'énumération, références — garde une valeur unique, car les traduire ne créerait que du travail.</p><h2>Les replis font le reste</h2><p>Demandez une langue et l'API parcourt une chaîne que vous configurez jusqu'à trouver une valeur. Un sous-titre français manquant revient à l'anglais au lieu d'afficher un vide : une traduction inachevée reste une page publiable.</p><ul><li>Le caractère obligatoire est satisfait par la langue par défaut : une traduction peut prendre du retard sans bloquer la publication.</li><li>La validation s'applique par langue : une limite de longueur vaut pour chaque traduction.</li><li>Demander toutes les langues d'un coup renvoie les cartes brutes, ce qu'attendent les outils de traduction.</li></ul><p>Cette page en est la démonstration : changez la langue dans l'en-tête et regardez le hero et les cartes changer alors que la mise en page ne bouge pas.</p>"
+        }
+      }
+    }
+  ]
+}

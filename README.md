@@ -18,13 +18,14 @@ Content comes from the delivery API; nothing is hard-coded.
 ## Running it
 
 ```bash
-cp .env.example .env.local   # fill in the space id and tokens
 npm install
+cp .env.example .env.local        # fill in the space id and tokens
+node scripts/seed-content.mjs     # create the content model + copy in your space
 npm run dev
 ```
 
-The space id and both API tokens come from the CMS: **Settings → API keys**
-(or the `python -m app.seed` output for a local CMS).
+The space id and API tokens come from the CMS: **Settings → API keys** (or the
+`python -m app.seed` output for a local CMS).
 
 | Variable | Why |
 |---|---|
@@ -38,6 +39,67 @@ The space id and both API tokens come from the CMS: **Settings → API keys**
 Without `CMS_PREVIEW_TOKEN` the site still works, but the editor's preview
 shows published content only, so an author's unsaved draft appears to do
 nothing.
+
+---
+
+## Seeding the content
+
+This site renders four content types and expects a landing page with slug
+`home`. Rather than clicking all that into the editor, create it in one go:
+
+```bash
+CMS_URL=http://localhost:8000 \
+CMS_SPACE_ID=<your space id> \
+CMS_ENVIRONMENT=master \
+CMS_MANAGEMENT_TOKEN=cms_mgm_… \
+node scripts/seed-content.mjs
+```
+
+The token must be a **Management** key (or a user JWT) — delivery and preview
+keys are read-only and cannot create anything.
+
+| Flag | Effect |
+|---|---|
+| *(none)* | create everything, then publish it |
+| `--draft` | create it, leave it unpublished so you can review in the editor first |
+| `--dry-run` | print what it would create and exit |
+
+It is safe to re-run: a content type that already exists is left alone, and an
+entry whose slug is taken is reused rather than duplicated — so it tops up a
+partially-seeded space instead of failing halfway.
+
+### What it creates
+
+| Type | Slug field? | Entries |
+|---|---|---|
+| `hero` | no — a block | 1 |
+| `card` | no — a block | 3 |
+| `landing_page` | yes | 1 (`home`) |
+| `article` | yes | 3 |
+
+`hero` and `card` deliberately model **no slug**. They are the blocks that
+demonstrate component-wise preview: opening one in the editor shows it inside
+the landing page that references it, rather than on a page of its own.
+
+Text is written in both `en-US` and `fr` so the header's language switcher has
+something to switch between, and so localized-field behaviour is visible.
+
+### Editing the copy
+
+All of it lives in [`content/demo-content.json`](content/demo-content.json) —
+the model and the prose, nothing in the script itself. Entries wire to each
+other by `ref`:
+
+```jsonc
+{ "ref": "page-home", "contentType": "landing_page",
+  "fields": {
+    "hero": { "$ref": "hero-home" },
+    "sections": [{ "$ref": "card-preview" }, { "$ref": "card-blocks" }]
+  } }
+```
+
+`{"$ref": …}` is replaced with the real entry id at creation time, so blocks
+must be listed before the pages that reference them.
 
 ---
 
